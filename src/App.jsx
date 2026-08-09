@@ -1,122 +1,127 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+// This is our login page.
+// It shows a form with username + password.
+// When submitted, we call loginUser() from login.js.
+
+import React, { useState } from 'react';
+import Home from './Home';
+import { loginUser, getSession } from './js-script/login';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const existingSession = getSession();
+  const [loggedIn, setLoggedIn] = useState(existingSession ? existingSession.loggedIn : false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    setErrorMessage('');
+    setIsLoading(true);
+
+    const result = await loginUser(username, password);
+
+    setIsLoading(false);
+
+    if (result.success) {
+      setLoggedIn(true);
+    } else {
+      setErrorMessage(result.error);
+    }
+  }
+
+  if (loggedIn) {
+    return <Home onLogout={() => setLoggedIn(false)} />;
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <div style={pageStyle}>
+      <form style={cardStyle} onSubmit={handleSubmit}>
+        <h1 style={titleStyle}>Login</h1>
+
+        <label style={labelStyle}>Username</label>
+        <input
+          style={inputStyle}
+          type="text"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+        />
+
+        <label style={labelStyle}>Password</label>
+        <input
+          style={inputStyle}
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+
+        {errorMessage ? <p style={errorStyle}>{errorMessage}</p> : null}
+
+        <button style={buttonStyle} type="submit" disabled={isLoading}>
+          {isLoading ? 'Checking...' : 'Log In'}
         </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </form>
+    </div>
+  );
 }
 
-export default App
+const pageStyle = {
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#111827',
+  fontFamily: 'Arial, sans-serif',
+};
+
+const cardStyle = {
+  backgroundColor: '#1f2937',
+  padding: '2rem',
+  borderRadius: '10px',
+  width: '300px',
+};
+
+const titleStyle = {
+  color: 'white',
+  marginBottom: '1rem',
+};
+
+const labelStyle = {
+  color: '#9ca3af',
+  fontSize: '0.85rem',
+  display: 'block',
+  marginTop: '0.75rem',
+};
+
+const inputStyle = {
+  width: '100%',
+  padding: '0.5rem',
+  marginTop: '0.25rem',
+  borderRadius: '5px',
+  border: '1px solid #374151',
+  backgroundColor: '#111827',
+  color: 'white',
+  boxSizing: 'border-box',
+};
+
+const buttonStyle = {
+  width: '100%',
+  marginTop: '1.25rem',
+  padding: '0.6rem',
+  borderRadius: '5px',
+  border: 'none',
+  backgroundColor: '#22c55e',
+  color: 'black',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+};
+
+const errorStyle = {
+  color: '#f87171',
+  marginTop: '0.75rem',
+  fontSize: '0.85rem',
+};
+
+export default App;
