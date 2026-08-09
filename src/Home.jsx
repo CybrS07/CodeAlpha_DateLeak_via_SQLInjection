@@ -1,7 +1,6 @@
 // This is the page we show AFTER a successful login.
 // It reveals our flag, since only a logged-in user should see it.
 
-import React from 'react';
 import { logoutUser, getSession } from './js-script/login';
 
 function Home(props) {

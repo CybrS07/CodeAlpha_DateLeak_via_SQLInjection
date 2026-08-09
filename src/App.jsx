@@ -2,7 +2,7 @@
 // It shows a form with username + password.
 // When submitted, we call loginUser() from login.js.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Home from './Home';
 import { loginUser, getSession } from './js-script/login';
 
