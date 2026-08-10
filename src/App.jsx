@@ -1,13 +1,11 @@
-// Login page. The regex protection inside login.js runs before any
-// request is sent - so a blocked attempt never even reaches the
-// server.
-
 import React, { useState } from 'react';
 import Home from './Home';
-import { loginUser, signupUser, getSession } from './js-script/login';
+import Home2 from './Home2';
+import { loginUser, signupUser, hasSavedToken } from './js-script/login';
 
 function App() {
   const [mode, setMode] = useState('login');
+  const [page, setPage] = useState('home'); // 'home' or 'home2', once logged in
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,8 +16,7 @@ function App() {
   const [infoMessage, setInfoMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const existingSession = getSession();
-  const [loggedIn, setLoggedIn] = useState(existingSession ? existingSession.loggedIn : false);
+  const [loggedIn, setLoggedIn] = useState(hasSavedToken());
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -55,8 +52,16 @@ function App() {
     }
   }
 
+  function handleLogoutFromHome() {
+    setLoggedIn(false);
+    setPage('home');
+  }
+
   if (loggedIn) {
-    return <Home onLogout={() => setLoggedIn(false)} />;
+    if (page === 'home2') {
+      return <Home2 onLogout={handleLogoutFromHome} onBack={() => setPage('home')} />;
+    }
+    return <Home onLogout={handleLogoutFromHome} onGoAdmin={() => setPage('home2')} />;
   }
 
   return (
