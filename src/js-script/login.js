@@ -1,58 +1,36 @@
-// This is the login/signup logic - the SECURE version.
+// This file has two layers of protection working together:
 //
-// Three things make login safe:
-//   1. We call a database function (login) and pass username/password
-//      as separate PARAMETERS - never as one glued-together string.
-//   2. The password and other sensitive fields are stored encrypted
-//      (AES-256) in the database, not as plain text.
-//   3. Logging in also requires a capability token - a second secret
-//      created automatically when the account was made. The user
-//      never sees or types it - the BROWSER remembers it for them
-//      (saved to localStorage right after signup), and login.js just
-//      quietly attaches it to every login attempt from that device.
+//   1. FRONT-END REGEX - catches obviously bad input (quotes,
+//      semicolons, SQL keywords) before we even send a request.
+//      This is a nice first line of defense and gives the user fast
+//      feedback, but it's not the REAL protection - clever attackers
+//      can often find ways around a regex filter.
+//
+//   2. The actual protection: our /login and /signup edge functions
+//      call PARAMETERIZED database functions (see schema.sql), which
+//      is what truly stops SQL injection, no matter what characters
+//      are typed. The regex below is a bonus, not our only defense.
 
-import { supabase } from './supabase';
+const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-// Where we keep each account's capability token in the browser.
-// (In a real app you'd want something more robust than localStorage,
-// like an httpOnly cookie set by a server - this is simplified for
-// the demo.)
-function tokenStorageKey(username) {
-  return 'capability_token:' + username;
+// Looks for classic SQL injection characters/keywords:
+// quotes, semicolons, comment markers, and SQL command words.
+const SQLI_PATTERN =
+  /('|"|--|;|\/\*|\*\/|\bOR\b|\bAND\b|\bUNION\b|\bSELECT\b|\bDROP\b|\bINSERT\b|\bDELETE\b|\bUPDATE\b|\bEXEC\b)/i;
+
+function looksLikeSqlInjection(value) {
+  return typeof value === 'string' && SQLI_PATTERN.test(value);
 }
 
-function saveToken(username, token) {
-  localStorage.setItem(tokenStorageKey(username), token);
-}
-
-function getStoredToken(username) {
-  return localStorage.getItem(tokenStorageKey(username));
-}
-
-// Creates a new account. The database hands back a capability token,
-// which we immediately save in the browser so the user never has to
-// see it, remember it, or type it in anywhere.
-export async function signupUser(username, phone, email, password) {
-  if (!username || !email || !password) {
-    return { success: false, error: 'Username, email, and password are required.' };
+// Checks a list of fields against the regex and returns an error
+// message for the first bad one it finds, or null if they're all okay.
+function checkFieldsForSqlInjection(fields) {
+  for (const [label, value] of Object.entries(fields)) {
+    if (value && looksLikeSqlInjection(value)) {
+      return `${label} contains characters that aren't allowed.`;
+    }
   }
-
-  const { data, error } = await supabase.rpc('signup', {
-    p_username: username,
-    p_phone: phone || null,
-    p_email: email,
-    p_password: password,
-    p_enc_key: import.meta.env.VITE_ENC_KEY,
-  });
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  const result = data[0];
-  saveToken(result.new_username, result.capability_token);
-
-  return { success: true };
+  return null;
 }
 
 export async function loginUser(username, password) {
@@ -60,44 +38,67 @@ export async function loginUser(username, password) {
     return { success: false, error: 'Please fill in both fields.' };
   }
 
-  // Grab the capability token automatically - the user never enters this.
-  const capabilityToken = getStoredToken(username);
-
-  if (!capabilityToken) {
-    return {
-      success: false,
-      error: 'No saved access token found for this account on this device. Please sign up first.',
-    };
+  const sqliError = checkFieldsForSqlInjection({ Username: username, Password: password });
+  if (sqliError) {
+    return { success: false, error: sqliError };
   }
 
-  // supabase.rpc() sends every value as a separate parameter -
-  // Postgres keeps them separate from the SQL code itself, so there
-  // is nothing for SQL injection to "break out" of.
-  const { data, error } = await supabase.rpc('login', {
-    p_username: username,
-    p_password: password,
-    p_capability_token: capabilityToken,
-    p_enc_key: import.meta.env.VITE_ENC_KEY,
+  try {
+    const response = await fetch(`${FUNCTIONS_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Login failed.' };
+    }
+
+    localStorage.setItem(
+      'session',
+      JSON.stringify({ loggedIn: true, username: result.username })
+    );
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: 'Could not reach the server.' };
+  }
+}
+
+export async function signupUser(username, phone, email, password) {
+  if (!username || !email || !password) {
+    return { success: false, error: 'Username, email, and password are required.' };
+  }
+
+  const sqliError = checkFieldsForSqlInjection({
+    Username: username,
+    Phone: phone,
+    Email: email,
+    Password: password,
   });
-
-  if (error) {
-    return { success: false, error: error.message };
+  if (sqliError) {
+    return { success: false, error: sqliError };
   }
 
-  if (!data || data.length === 0) {
-    return { success: false, error: 'Wrong username or password.' };
+  try {
+    const response = await fetch(`${FUNCTIONS_URL}/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, phone, email, password }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Sign up failed.' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: 'Could not reach the server.' };
   }
-
-  const user = data[0];
-
-  // Save a tiny "I am logged in" note in the browser.
-  // This is just for our demo, not real session handling.
-  localStorage.setItem(
-    'session',
-    JSON.stringify({ loggedIn: true, username: user.out_username })
-  );
-
-  return { success: true, account: user };
 }
 
 export function logoutUser() {
