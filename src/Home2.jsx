@@ -1,16 +1,14 @@
-// Admin home page. Fetches the admin flag from /get-admin-flag. The
-// server checks whether the token really has "home:admin" in its
-// signed capabilities - if not, it returns a 403 and we show an
-// access-denied message instead of a flag. Nothing about this page
-// itself decides who's an admin; it just asks the server and shows
-// whatever it says.
+// Admin home page. Fetches the admin flag from /get-admin-flag.
+// The server checks the JWT signature and whether it really has
+// "home:admin" in its capability list - if not, it returns a 403
+// and we show an access-denied message instead of a flag.
+// Nothing here trusts the client's hint; the server decides.
 
 import React, { useEffect, useState } from 'react';
-import { fetchAdminFlag } from './js-script/login-secure';
+import { fetchAdminFlag } from './js-script/login';
 
 function Home2(props) {
   const [flag, setFlag] = useState(null);
-  const [username, setUsername] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +18,6 @@ function Home2(props) {
 
       if (result.success) {
         setFlag(result.flag);
-        setUsername(result.username);
       } else {
         setErrorMessage(result.error);
       }
@@ -35,6 +32,11 @@ function Home2(props) {
     <div style={pageStyle}>
       <div style={cardStyle}>
         <h1 style={titleStyle}>Admin Panel</h1>
+
+        <div style={securityBadgeStyle}>
+          <span style={dotStyle} />
+          Server verifies home:admin
+        </div>
 
         {loading && <p style={subtitleStyle}>Checking your admin capability...</p>}
 
@@ -69,14 +71,52 @@ const pageStyle = {
   fontFamily: 'Arial, sans-serif',
 };
 
-const cardStyle = { backgroundColor: '#1f2937', padding: '2rem', borderRadius: '10px', width: '340px', textAlign: 'center' };
-const titleStyle = { color: 'white', marginBottom: '0.25rem' };
+const cardStyle = {
+  backgroundColor: '#1f2937',
+  padding: '2rem',
+  borderRadius: '10px',
+  width: '340px',
+  textAlign: 'center',
+};
+const titleStyle = { color: 'white', marginBottom: '0.5rem' };
 const subtitleStyle = { color: '#9ca3af', marginBottom: '1.25rem' };
-const flagBoxStyle = { backgroundColor: '#111827', border: '1px solid #a855f7', borderRadius: '8px', padding: '0.75rem', marginBottom: '1.25rem' };
+
+const securityBadgeStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.4rem',
+  fontSize: '0.7rem',
+  color: '#a855f7',
+  backgroundColor: 'rgba(168,85,247,0.08)',
+  border: '1px solid rgba(168,85,247,0.25)',
+  padding: '0.25rem 0.6rem',
+  borderRadius: '999px',
+  marginBottom: '1rem',
+};
+const dotStyle = {
+  width: '6px',
+  height: '6px',
+  borderRadius: '999px',
+  backgroundColor: '#a855f7',
+};
+
+const flagBoxStyle = {
+  backgroundColor: '#111827',
+  border: '1px solid #a855f7',
+  borderRadius: '8px',
+  padding: '0.75rem',
+  marginBottom: '1.25rem',
+};
 const flagLabelStyle = { color: '#a855f7', fontSize: '0.75rem', margin: 0, marginBottom: '0.35rem' };
 const flagStyle = { color: 'white', fontSize: '0.9rem', wordBreak: 'break-all' };
 
-const deniedBoxStyle = { backgroundColor: '#111827', border: '1px solid #f87171', borderRadius: '8px', padding: '0.75rem', marginBottom: '1.25rem' };
+const deniedBoxStyle = {
+  backgroundColor: '#111827',
+  border: '1px solid #f87171',
+  borderRadius: '8px',
+  padding: '0.75rem',
+  marginBottom: '1.25rem',
+};
 const deniedTextStyle = { color: '#f87171', fontWeight: 'bold', margin: 0, marginBottom: '0.35rem' };
 const errorStyle = { color: '#9ca3af', fontSize: '0.85rem', margin: 0 };
 
