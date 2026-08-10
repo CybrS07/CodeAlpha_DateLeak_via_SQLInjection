@@ -6,7 +6,7 @@
 // whatever it says.
 
 import React, { useEffect, useState } from 'react';
-import { fetchAdminFlag } from './js-script/login';
+import { fetchAdminFlag } from './js-script/login-secure';
 
 function Home2(props) {
   const [flag, setFlag] = useState(null);

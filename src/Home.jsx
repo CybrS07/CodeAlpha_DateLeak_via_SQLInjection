@@ -4,7 +4,7 @@
 // hint, it asks the server again for real.
 
 import React, { useEffect, useState } from 'react';
-import { logoutUser, fetchFlag, hasAdminCapabilityHint } from './js-script/login';
+import { logoutUser, fetchFlag, hasAdminCapabilityHint } from './js-script/login-secure';
 
 function Home(props) {
   const [flag, setFlag] = useState(null);

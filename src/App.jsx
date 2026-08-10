@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Home from './Home';
 import Home2 from './Home2';
-import { loginUser, signupUser, hasSavedToken } from './js-script/login';
+import { loginUser, signupUser, hasSavedToken } from './js-script/login-secure';
 
 function App() {
   const [mode, setMode] = useState('login');
